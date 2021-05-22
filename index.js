@@ -1,5 +1,6 @@
 const MongoClient= require("mongodb").MongoClient; //Required the mongodb and then MongoClient object 
 const assert= require("assert").strict;
+const dboper= require("./operations"); //Acquiring the operations.js module. dboper stands for database operations
 
 //Setting up a connection to the MongoDB server
 const url= "mongodb://localhost:27017/"; //This is the port number in which MongoDB server is running: 27017 
@@ -26,18 +27,33 @@ MongoClient.connect(url, {useUnifiedTopology: true}, (err, client)=> {
         console.log("Dropped Collection", result); //Print the result in the console.log
 
         //Re-creating the campsite's collection and get access to it.
-        const collection= db.collection("campsites"); //Re-creating the campsite's collection
-        collection.insertOne({name: "Breadcrumb Trail Campground", description: "Test"}, //Insert a document into this collection. To do this, we have the collection object that was created in the above line and then use the insert() method.
-        (err, result) => { //Second argument to the insertOne() method is a callback function. Callback function takes two parameters as well: err and result. Always use err first when using node.
-            assert.strictEqual(err, null);
+        //We have commented the line before 
+        //const collection= db.collection("campsites"); //Re-creating the campsite's collection
+        
+        //For insertDocument() method, you need to have 4 parameters: db (database), document (what we are inserted in the document), collection (name of the collection, in this case it is "campsites"), and callback function is the fourth argument that will be called at the end of each method. 
+        dboper.insertDocument(db, {name: "Breadcrumb Trail Campground", description: "Test"}, "campsites", result => { //Insert a document into this collection. To do this, we have the collection object that was created in the above line and then use the insert() method.
             console.log("Insert Document:", result.ops); //ops stands for operations and in this case (when used in an insertOne() method), ops will contain an array with the document that was inserted.
-
-            //Print all the documents in the console that is in the collection. Use the .find() method. Give the .find() method an empty parameter list if you want to find all the documents in a collection, otherwise you specify it inside of its parameter list.
-            collection.find().toArray((err, docs) => { //.toArray() method converts the documents to an array of objects so we can console.log it. It has a parameter list of err and then docs.
-                assert.strictEqual(err, null);
+            
+            //callback function will be called when the documents are found
+            dboper.findDocuments(db, "campsites", docs => {
                 console.log("Found Documents:", docs);
-                client.close(); //Close the client's connection to the MongoDB server.
-            }); 
+                
+                //For the second parameter in the updateDocument parameter list (it is {name: "Breadcrumb Trail Campground"}), Module will look for this document that has this field and it will know which document to update (only updates a single document).
+                //For the third parameter it is the information that you want to update the document with (in form of an object)
+                dboper.updateDocument(db, {name: "Breadcrumb Trail Campground"}, {description: "Updated Test Description"}, "campsites", result => {
+                    console.log("Updated Document Count:", result.result.nModified);  //The count will give us the number of documents updated by result.result.nModified
+                    
+                    dboper.findDocuments(db, "campsites", docs => {
+                        console.log("Found Documents:", docs);
+
+                        dboper.removeDocument(db, {name: "Breadcrumb Trail Campground"}, "campsites", result => {
+                            console.log("Deleted Document Count:", result.deletedCount);
+                        
+                            client.close(); //Close the client's connection to the MongoDB server. */          
+                        });
+                    });
+                });
+            });
         }); 
     }); 
-});
+}); 
